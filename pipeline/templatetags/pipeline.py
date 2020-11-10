@@ -154,8 +154,9 @@ class StylesheetNode(PipelineMixin, template.Node):
 
 
 class JavascriptNode(PipelineMixin, template.Node):
-    def __init__(self, name):
+    def __init__(self, name, csp_nonce):
         self.name = name
+        self.csp_nonce = csp_nonce
 
     def render(self, context):
         super(JavascriptNode, self).render(context)
@@ -173,14 +174,16 @@ class JavascriptNode(PipelineMixin, template.Node):
         context = package.extra_context
         context.update({
             'type': guess_type(path, 'text/javascript'),
-            'url': mark_safe(staticfiles_storage.url(path))
+            'url': mark_safe(staticfiles_storage.url(path)),
+            'csp_nonce': self.csp_nonce,
         })
         return render_to_string(template_name, context)
 
     def render_inline(self, package, js):
         context = package.extra_context
         context.update({
-            'source': js
+            'source': js,
+            'csp_nonce': self.csp_nonce,
         })
         return render_to_string("pipeline/inline_js.html", context)
 
@@ -207,7 +210,7 @@ def stylesheet(parser, token):
 @register.tag
 def javascript(parser, token):
     try:
-        tag_name, name = token.split_contents()
+        tag_name, name, csp_nonce = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError('%r requires exactly one argument: the name of a group in the PIPELINE.JAVASVRIPT setting' % token.split_contents()[0])
-    return JavascriptNode(name)
+        raise template.TemplateSyntaxError('%r requires exactly two arguments: the name of a group in the PIPELINE.JAVASCRIPT setting, and the CSP_NONCE' % token.split_contents()[0])
+    return JavascriptNode(name, csp_nonce)

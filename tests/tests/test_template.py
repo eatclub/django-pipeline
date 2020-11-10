@@ -68,17 +68,17 @@ class DjangoTest(TestCase):
         self.assertEqual(u'<link href="/static/screen_title.css" rel="stylesheet" type="text/css" media="all" title="Default Style" />', rendered)
 
     def test_compressed_js(self):
-        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts" %}""")
-        self.assertEqual(u'<script type="text/javascript" src="/static/scripts.js" charset="utf-8"></script>', rendered)
+        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts" foo %}""")
+        self.assertEqual(u'<script nonce="foo" type="text/javascript" src="/static/scripts.js" charset="utf-8"></script>', rendered)
 
     def test_compressed_js_async(self):
-        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_async" %}""")
-        self.assertEqual(u'<script async type="text/javascript" src="/static/scripts_async.js" charset="utf-8"></script>', rendered)
+        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_async" foo %}""")
+        self.assertEqual(u'<script nonce="foo" async type="text/javascript" src="/static/scripts_async.js" charset="utf-8"></script>', rendered)
 
     def test_compressed_js_defer(self):
-        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_defer" %}""")
-        self.assertEqual(u'<script defer type="text/javascript" src="/static/scripts_defer.js" charset="utf-8"></script>', rendered)
+        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_defer" foo %}""")
+        self.assertEqual(u'<script nonce="foo" defer type="text/javascript" src="/static/scripts_defer.js" charset="utf-8"></script>', rendered)
 
     def test_compressed_js_async_defer(self):
-        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_async_defer" %}""")
-        self.assertEqual(u'<script async defer type="text/javascript" src="/static/scripts_async_defer.js" charset="utf-8"></script>', rendered)
+        rendered = self.render_template(u"""{% load pipeline %}{% javascript "scripts_async_defer" foo %}""")
+        self.assertEqual(u'<script nonce="foo" async defer type="text/javascript" src="/static/scripts_async_defer.js" charset="utf-8"></script>', rendered)
