@@ -50,7 +50,7 @@ class PipelineMixin:
         except VariableDoesNotExist:
             pass
 
-    def render_compressed(self, package, package_name, package_type):
+    def render_compressed(self, package, package_name, package_type, csp_nonce=None):
         """Render HTML for the package.
 
         If ``PIPELINE_ENABLED`` is ``True``, this will render the package's
@@ -63,12 +63,12 @@ class PipelineMixin:
         """
         if settings.PIPELINE_ENABLED:
             return self.render_compressed_output(package, package_name,
-                                                 package_type)
+                                                 package_type, csp_nonce)
         else:
             return self.render_compressed_sources(package, package_name,
-                                                  package_type)
+                                                  package_type, csp_nonce)
 
-    def render_compressed_output(self, package, package_name, package_type):
+    def render_compressed_output(self, package, package_name, package_type, csp_nonce):
         """Render HTML for using the package's output file.
 
         Subclasses can override this method to provide custom behavior for
@@ -76,9 +76,11 @@ class PipelineMixin:
         """
         method = getattr(self, f'render_{package_type}')
 
+        if package_type == 'js':
+            return method(package, package.output_filename, csp_nonce)
         return method(package, package.output_filename)
 
-    def render_compressed_sources(self, package, package_name, package_type):
+    def render_compressed_sources(self, package, package_name, package_type, csp_nonce):
         """Render HTML for using the package's list of source files.
 
         Each source file will first be collected, if
@@ -108,6 +110,8 @@ class PipelineMixin:
 
         templates = packager.pack_templates(package)
 
+        if package_type == 'js':
+            return method(package, paths, csp_nonce, templates=templates)
         return method(package, paths, templates=templates)
 
     def render_error(self, package_type, package_name, e):
@@ -155,12 +159,14 @@ class StylesheetNode(PipelineMixin, template.Node):
 
 
 class JavascriptNode(PipelineMixin, template.Node):
-    def __init__(self, name):
+    def __init__(self, name, nonce):
         self.name = name
+        self.nonce = nonce
 
     def render(self, context):
         super().render(context)
         package_name = template.Variable(self.name).resolve(context)
+        csp_nonce = template.Variable(self.nonce).resolve(context)
 
         try:
             package = self.package_for(package_name, 'js')
@@ -169,26 +175,28 @@ class JavascriptNode(PipelineMixin, template.Node):
             logger.warn(w, package_name)
             # fail silently, do not return anything if an invalid group is specified
             return ''
-        return self.render_compressed(package, package_name, 'js')
+        return self.render_compressed(package, package_name, 'js', csp_nonce)
 
-    def render_js(self, package, path):
+    def render_js(self, package, path, csp_nonce):
         template_name = package.template_name or "pipeline/js.html"
         context = package.extra_context
         context.update({
             'type': guess_type(path, 'text/javascript'),
-            'url': mark_safe(staticfiles_storage.url(path))
+            'url': mark_safe(staticfiles_storage.url(path)),
+            'csp_nonce': csp_nonce,
         })
         return render_to_string(template_name, context)
 
-    def render_inline(self, package, js):
+    def render_inline(self, package, js, csp_nonce):
         context = package.extra_context
         context.update({
-            'source': js
+            'source': js,
+            'csp_nonce': csp_nonce,
         })
         return render_to_string("pipeline/inline_js.html", context)
 
-    def render_individual_js(self, package, paths, templates=None):
-        tags = [self.render_js(package, js) for js in paths]
+    def render_individual_js(self, package, paths, csp_nonce, templates=None):
+        tags = [self.render_js(package, js, csp_nonce) for js in paths]
         if templates:
             tags.append(self.render_inline(package, templates))
         return '\n'.join(tags)
@@ -214,11 +222,7 @@ def stylesheet(parser, token):
 @register.tag
 def javascript(parser, token):
     try:
-        tag_name, name = token.split_contents()
+        tag_name, name, csp_nonce = token.split_contents()
     except ValueError:
-        e = (
-            '%r requires exactly one argument: the name '
-            'of a group in the PIPELINE.JAVASVRIPT setting'
-        )
-        raise template.TemplateSyntaxError(e % token.split_contents()[0])
-    return JavascriptNode(name)
+        raise template.TemplateSyntaxError('%r requires exactly two arguments: the name of a group in the PIPELINE.JAVASCRIPT setting, and the CSP_NONCE' % token.split_contents()[0])
+    return JavascriptNode(name, csp_nonce)
