@@ -12,9 +12,12 @@ from pipeline.conf import settings
 class PipelineFinder(BaseStorageFinder):
     storage = staticfiles_storage
 
-    def find(self, path, all=False):
+    def find(self, path, all=False, find_all=None):
+        # Django 5.2 renamed 'all' parameter to 'find_all'
+        if find_all is not None:
+            all = find_all
         if not settings.PIPELINE_ENABLED:
-            return super(PipelineFinder, self).find(path, all)
+            return super(PipelineFinder, self).find(path, all=all)
         else:
             return []
 
