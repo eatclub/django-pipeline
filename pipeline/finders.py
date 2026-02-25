@@ -13,6 +13,14 @@ from django.utils._os import safe_join
 from pipeline.conf import settings
 
 
+def _call_find_compat(find_callable, path, find_all):
+    """Call Django staticfiles find APIs across all/find_all renames."""
+    try:
+        return find_callable(path, find_all=find_all)
+    except TypeError:
+        return find_callable(path, all=find_all)
+
+
 class PipelineFinder(BaseStorageFinder):
     storage = staticfiles_storage
 
@@ -21,7 +29,7 @@ class PipelineFinder(BaseStorageFinder):
         if find_all is not None:
             all = find_all
         if not settings.PIPELINE_ENABLED:
-            return super(PipelineFinder, self).find(path, all=all)
+            return _call_find_compat(super(PipelineFinder, self).find, path, all)
         else:
             return []
 
@@ -63,7 +71,7 @@ class CachedFileFinder(BaseFinder):
         except ValueError:
             return []
         path = ".".join((start, extn))
-        return find(path, all=all) or []
+        return _call_find_compat(find, path, all) or []
 
     def list(self, *args):
         return []
