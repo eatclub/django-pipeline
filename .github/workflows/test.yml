@@ -51,7 +51,9 @@ jobs:
     - name: Set up Node
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        # node-sass in this repo is ABI-sensitive; pin to a Node 18 build
+        # compatible with the checked-in dependency tree.
+        node-version: '18.18.2'
 
     - name: Instal Node dependencies
       run: npm install
