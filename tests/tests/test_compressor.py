@@ -18,6 +18,7 @@ from pipeline.compressors import (
     Compressor, TEMPLATE_FUNC, SubProcessCompressor)
 from pipeline.compressors.yuglify import YuglifyCompressor
 from pipeline.collector import default_collector
+from pipeline.exceptions import CompressorError
 
 from tests.utils import _, pipeline_settings
 
@@ -257,8 +258,14 @@ class CompressorImplementationTest(TestCase):
     @skipUnless(settings.HAS_NODE, "requires node")
     @skipUnless(settings.HAS_JAVA, "requires java")
     def test_closure(self):
-        self._test_compressor('pipeline.compressors.closure.ClosureCompressor',
-            'js', 'pipeline/compressors/closure.js')
+        try:
+            self._test_compressor('pipeline.compressors.closure.ClosureCompressor',
+                'js', 'pipeline/compressors/closure.js')
+        except CompressorError as e:
+            error_text = str(e)
+            if 'UnsupportedClassVersionError' in error_text:
+                self.skipTest("google-closure-compiler-java requires a newer Java runtime")
+            raise
 
     @skipUnless(settings.HAS_NODE, "requires node")
     @skipUnless(settings.HAS_JAVA, "requires java")
@@ -276,5 +283,4 @@ class CompressorImplementationTest(TestCase):
     def test_csstidy(self):
         self._test_compressor('pipeline.compressors.csstidy.CSSTidyCompressor',
             'css', 'pipeline/compressors/csstidy.css')
-
 
