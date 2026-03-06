@@ -1,6 +1,6 @@
 import glob
 import os
-import distutils.spawn
+import shutil
 
 
 def local_path(path):
@@ -146,9 +146,9 @@ PIPELINE = {
 
 NODE_MODULES_PATH = local_path('../node_modules')
 NODE_BIN_PATH = os.path.join(NODE_MODULES_PATH, '.bin')
-NODE_EXE_PATH = distutils.spawn.find_executable('node')
-JAVA_EXE_PATH = distutils.spawn.find_executable('java')
-CSSTIDY_EXE_PATH = distutils.spawn.find_executable('csstidy')
+NODE_EXE_PATH = shutil.which('node')
+JAVA_EXE_PATH = shutil.which('java')
+CSSTIDY_EXE_PATH = shutil.which('csstidy')
 HAS_NODE = bool(NODE_EXE_PATH)
 HAS_JAVA = bool(JAVA_EXE_PATH)
 HAS_CSSTIDY = bool(CSSTIDY_EXE_PATH)

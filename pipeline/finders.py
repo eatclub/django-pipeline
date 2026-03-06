@@ -1,20 +1,35 @@
 from itertools import chain
-
-from django.contrib.staticfiles.storage import staticfiles_storage
-from django.contrib.staticfiles.finders import BaseFinder, BaseStorageFinder, find, \
-    AppDirectoriesFinder as DjangoAppDirectoriesFinder, FileSystemFinder as DjangoFileSystemFinder
-from django.utils._os import safe_join
 from os.path import normpath
 
+from django.contrib.staticfiles.finders import \
+    AppDirectoriesFinder as DjangoAppDirectoriesFinder
+from django.contrib.staticfiles.finders import BaseFinder, BaseStorageFinder
+from django.contrib.staticfiles.finders import \
+    FileSystemFinder as DjangoFileSystemFinder
+from django.contrib.staticfiles.finders import find
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.utils._os import safe_join
+
 from pipeline.conf import settings
+
+
+def _call_find_compat(find_callable, path, find_all):
+    """Call Django staticfiles find APIs across all/find_all renames."""
+    try:
+        return find_callable(path, find_all=find_all)
+    except TypeError:
+        return find_callable(path, all=find_all)
 
 
 class PipelineFinder(BaseStorageFinder):
     storage = staticfiles_storage
 
-    def find(self, path, all=False):
+    def find(self, path, all=False, find_all=None):
+        # Django 5.2 renamed 'all' parameter to 'find_all'
+        if find_all is not None:
+            all = find_all
         if not settings.PIPELINE_ENABLED:
-            return super(PipelineFinder, self).find(path, all)
+            return _call_find_compat(super(PipelineFinder, self).find, path, all)
         else:
             return []
 
@@ -23,13 +38,16 @@ class PipelineFinder(BaseStorageFinder):
 
 
 class ManifestFinder(BaseFinder):
-    def find(self, path, all=False):
+    def find(self, path, all=False, find_all=None):
         """
         Looks for files in PIPELINE.STYLESHEETS and PIPELINE.JAVASCRIPT
         """
+        # Django 5.2 renamed 'all' parameter to 'find_all'
+        if find_all is not None:
+            all = find_all
         matches = []
         for elem in chain(settings.STYLESHEETS.values(), settings.JAVASCRIPT.values()):
-            if normpath(elem['output_filename']) == normpath(path):
+            if normpath(elem["output_filename"]) == normpath(path):
                 match = safe_join(settings.PIPELINE_ROOT, path)
                 if not all:
                     return match
@@ -41,16 +59,19 @@ class ManifestFinder(BaseFinder):
 
 
 class CachedFileFinder(BaseFinder):
-    def find(self, path, all=False):
+    def find(self, path, all=False, find_all=None):
         """
         Work out the uncached name of the file and look that up instead
         """
+        # Django 5.2 renamed 'all' parameter to 'find_all'
+        if find_all is not None:
+            all = find_all
         try:
-            start, _, extn = path.rsplit('.', 2)
+            start, _, extn = path.rsplit(".", 2)
         except ValueError:
             return []
-        path = '.'.join((start, extn))
-        return find(path, all=all) or []
+        path = ".".join((start, extn))
+        return _call_find_compat(find, path, all) or []
 
     def list(self, *args):
         return []
@@ -76,12 +97,13 @@ class AppDirectoriesFinder(PatternFilterMixin, DjangoAppDirectoriesFinder):
     This allows us to concentrate/compress our components without dragging
     the raw versions in via collectstatic.
     """
+
     ignore_patterns = [
-        '*.js',
-        '*.css',
-        '*.less',
-        '*.scss',
-        '*.styl',
+        "*.js",
+        "*.css",
+        "*.less",
+        "*.scss",
+        "*.styl",
     ]
 
 
@@ -92,28 +114,29 @@ class FileSystemFinder(PatternFilterMixin, DjangoFileSystemFinder):
     This allows us to concentrate/compress our components without dragging
     the raw versions in too.
     """
+
     ignore_patterns = [
-        '*.js',
-        '*.css',
-        '*.less',
-        '*.scss',
-        '*.styl',
-        '*.sh',
-        '*.html',
-        '*.md',
-        '*.markdown',
-        '*.php',
-        '*.txt',
-        'README*',
-        'LICENSE*',
-        '*examples*',
-        '*test*',
-        '*bin*',
-        '*samples*',
-        '*docs*',
-        '*build*',
-        '*demo*',
-        'Makefile*',
-        'Gemfile*',
-        'node_modules',
+        "*.js",
+        "*.css",
+        "*.less",
+        "*.scss",
+        "*.styl",
+        "*.sh",
+        "*.html",
+        "*.md",
+        "*.markdown",
+        "*.php",
+        "*.txt",
+        "README*",
+        "LICENSE*",
+        "*examples*",
+        "*test*",
+        "*bin*",
+        "*samples*",
+        "*docs*",
+        "*build*",
+        "*demo*",
+        "Makefile*",
+        "Gemfile*",
+        "node_modules",
     ]

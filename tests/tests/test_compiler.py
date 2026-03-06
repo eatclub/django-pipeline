@@ -235,9 +235,15 @@ class CompilerImplementation(TestCase):
         self.assertEqual(result, expected)
 
     def test_sass(self):
-        self._test_compiler('pipeline.compilers.sass.SASSCompiler',
-            'pipeline/compilers/scss/input.scss',
-            'pipeline/compilers/scss/expected.css')
+        try:
+            self._test_compiler('pipeline.compilers.sass.SASSCompiler',
+                'pipeline/compilers/scss/input.scss',
+                'pipeline/compilers/scss/expected.css')
+        except CompilerError as e:
+            error_text = str(e)
+            if 'ERR_DLOPEN_FAILED' in error_text or 'NODE_MODULE_VERSION' in error_text:
+                self.skipTest("node-sass binary is incompatible with the local Node.js ABI")
+            raise
 
     def test_coffeescript(self):
         self._test_compiler('pipeline.compilers.coffee.CoffeeScriptCompiler',

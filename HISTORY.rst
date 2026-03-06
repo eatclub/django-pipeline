@@ -6,6 +6,10 @@ History
 Unreleased
 ==========
 
+* Add explicit CI coverage for upgrading from **Django 5.1.15** to
+  **Django 5.2.x**.
+* Add **Django 5.1** and **Django 5.2** package classifiers.
+
 2.0.8
 =====
 
